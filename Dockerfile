@@ -8,6 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
+ENV NODE_ENV=development
 RUN npm install
 
 # Copy local code to the container image
@@ -15,6 +16,9 @@ COPY . .
 
 # Build the Vite application
 RUN npm run build
+
+# Set back to production for runtime
+ENV NODE_ENV=production
 
 # Expose the port the app runs on
 EXPOSE 8080

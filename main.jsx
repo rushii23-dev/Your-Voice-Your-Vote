@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 
 import './tailwind.css'
 import './style.css'
+import './script.js'
 
 import VoterRoadmap from './VoterRoadmap.jsx'
 

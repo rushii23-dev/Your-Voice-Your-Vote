@@ -594,3 +594,138 @@ if (stateSelect && citySelect && showElectionInfoBtn && resetElectionBtn) {
     }
   });
 }
+
+// ── Ankar Design System: Navbar scroll handling ─────────────
+// Transition from transparent to solid when scrolling past the hero
+(function () {
+  const navbar = document.getElementById('navbar');
+  const hero = document.getElementById('home');
+  if (!navbar || !hero) return;
+
+  function onScroll() {
+    const heroBottom = hero.getBoundingClientRect().bottom;
+    navbar.classList.toggle('navbar--scrolled', heroBottom <= 68);
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll(); // run once on load
+})();
+
+// ── Voter Readiness Checklist (Clickable) ────────────────
+window.toggleCheck = function(element) {
+  element.classList.toggle('is-checked');
+  const icon = element.querySelector('.material-icons');
+  if (element.classList.contains('is-checked')) {
+    icon.textContent = 'check_circle';
+  } else {
+    icon.textContent = 'check_circle_outline';
+  }
+  
+  // Update progress bar
+  const cards = document.querySelectorAll('.checklist-card');
+  const checked = document.querySelectorAll('.checklist-card.is-checked');
+  const fill = document.getElementById('checklist-fill');
+  const label = document.getElementById('checklist-label');
+  
+  if (fill) fill.style.width = ((checked.length / cards.length) * 100) + '%';
+  if (label) label.textContent = `${checked.length} of ${cards.length} complete`;
+};
+
+// ── Hero PIN Code Search (Civic Data Engine) ────────────────
+(function() {
+  const pinForm = document.getElementById('pin-form');
+  const pinInput = document.getElementById('pin-code');
+  const pinResult = document.getElementById('pin-result');
+
+  if (!pinForm || !pinInput || !pinResult) return;
+
+  pinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pincode = pinInput.value.trim();
+    if (!pincode) return;
+
+    pinResult.textContent = 'Querying Civic Data Engine...';
+    pinResult.style.color = '#cfcfcf';
+    pinResult.style.whiteSpace = 'pre-wrap';
+    pinResult.style.textAlign = 'left';
+    pinResult.style.fontFamily = 'monospace';
+    pinResult.style.background = 'rgba(0,0,0,0.4)';
+    pinResult.style.padding = '20px';
+    pinResult.style.borderRadius = '8px';
+    pinResult.style.border = '1px solid rgba(255,255,255,0.1)';
+    pinResult.style.marginTop = '32px';
+    pinResult.style.lineHeight = '1.6';
+
+    const prompt = `SYSTEM ROLE:
+You are the Civic Data Engine for "Your Voice Your Vote", a high-trust, non-partisan editorial platform. Your sole function is to process user-provided pincodes/ZIP codes and output strictly verified, mathematically precise local election data for the current year, 2026. 
+
+DATA RETRIEVAL & ACCURACY RULES (ZERO TOLERANCE FOR ERROR):
+1. NO HALLUCINATIONS: You must never guess, estimate, or fabricate an election date, candidate name, or precinct location.
+2. REPUTABLE SOURCES ONLY: You must cross-reference and pull data exclusively from verified civic APIs, State Election Commissions, the Federal Election Commission, or equivalent official government registries. 
+3. 2026 CONTEXT: All data provided must be relevant to the 2026 election cycle. 
+4. HANDLING MISSING DATA: If a specific 2026 election date or local representative for a given pincode has not yet been officially certified or is unavailable in your verified dataset, you must output: "AWAITING OFFICIAL 2026 CERTIFICATION." Do not attempt to fill the gap with historical data unless explicitly stating it is historical.
+
+OUTPUT FORMATTING (THE ANKAR DESIGN SYSTEM):
+Your response must be stripped of all conversational filler, pleasantries, emojis, and exclamation points. Output the data in a stark, highly structured, editorial format that fits perfectly into a minimalist UI. 
+
+Use the following exact markdown structure for your response:
+
+DATA VAULT / INQUIRY LOG: [Insert Pincode]
+--------------------------------------------------
+> JURISDICTION: [City, State, District]
+> STATUS: [Active / Pending 2026 Cycle]
+
+UPCOMING 2026 ELECTIONS
+* [Date - e.g., NOV 03, 2026]: [Type of Election - e.g., General Midterm]
+* [Date]: [Type of Election - e.g., Local Municipal]
+(Note: If exact dates are unknown, state "AWAITING OFFICIAL 2026 CERTIFICATION")
+
+LOCAL REPRESENTATIVES (INCUMBENTS)
+* Executive: [Name] ([Party - optional, keep neutral])
+* Legislative: [Name] ([Party - optional])
+
+YOUR PRECINCT DATA
+* Polling Location: [Insert Address or "Pending Assignment 30 days prior to election"]
+* Registration Status Verification: [Insert official state URL to verify registration]
+
+--------------------------------------------------
+END OF REPORT
+
+USER PINCODE: ${pincode}`;
+
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        pinResult.textContent = 'Error: VITE_GEMINI_API_KEY is missing.';
+        pinResult.style.color = '#ff6b6b';
+        return;
+      }
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1 }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (text) {
+        pinResult.textContent = text;
+      } else {
+        pinResult.textContent = 'No data returned. AWAITING OFFICIAL 2026 CERTIFICATION.';
+      }
+    } catch (err) {
+      pinResult.textContent = 'Error contacting Civic Data Engine. Please try again.';
+      pinResult.style.color = '#ff6b6b';
+      console.error(err);
+    }
+  });
+})();

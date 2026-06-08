@@ -656,42 +656,23 @@ window.toggleCheck = function(element) {
     pinResult.style.marginTop = '32px';
     pinResult.style.lineHeight = '1.6';
 
-    const prompt = `SYSTEM ROLE:
-You are the Civic Data Engine for "Your Voice Your Vote", a high-trust, non-partisan editorial platform. Your sole function is to process user-provided pincodes/ZIP codes and output strictly verified, mathematically precise local election data for the current year, 2026. 
+    const systemInstruction = `You are the Civic Data Engine for a high-trust voting platform. The current year is 2026. Your sole function is to identify ONLY strictly upcoming future elections for the given pincode.
+STRICT TEMPORAL RULES:
+1. NO PAST DATES: You MUST actively filter out and discard any election dates from 2023, 2024, 2025, or earlier. Never output an election date that has already passed.
+2. ZERO HALLUCINATIONS: Pull exclusively from live, official registries.
+3. UNKNOWN FUTURE DATA: If the next future election is not scheduled, output ONLY: "AWAITING OFFICIAL ELECTION COMMISSION SCHEDULING."
 
-DATA RETRIEVAL & ACCURACY RULES (ZERO TOLERANCE FOR ERROR):
-1. NO HALLUCINATIONS: You must never guess, estimate, or fabricate an election date, candidate name, or precinct location.
-2. REPUTABLE SOURCES ONLY: You must cross-reference and pull data exclusively from verified civic APIs, State Election Commissions, the Federal Election Commission, or equivalent official government registries. 
-3. 2026 CONTEXT: All data provided must be relevant to the 2026 election cycle. 
-4. HANDLING MISSING DATA: If a specific 2026 election date or local representative for a given pincode has not yet been officially certified or is unavailable in your verified dataset, you must output: "AWAITING OFFICIAL 2026 CERTIFICATION." Do not attempt to fill the gap with historical data unless explicitly stating it is historical.
+OUTPUT FORMAT:
+Provide the data in a stark format with zero pleasantries. Use exactly this structure:
 
-OUTPUT FORMATTING (THE ANKAR DESIGN SYSTEM):
-Your response must be stripped of all conversational filler, pleasantries, emojis, and exclamation points. Output the data in a stark, highly structured, editorial format that fits perfectly into a minimalist UI. 
-
-Use the following exact markdown structure for your response:
-
-DATA VAULT / INQUIRY LOG: [Insert Pincode]
---------------------------------------------------
 > JURISDICTION: [City, State, District]
-> STATUS: [Active / Pending 2026 Cycle]
+> NEXT ELECTION: [Strictly Future Date] — [Type of Election]
 
-UPCOMING 2026 ELECTIONS
-* [Date - e.g., NOV 03, 2026]: [Type of Election - e.g., General Midterm]
-* [Date]: [Type of Election - e.g., Local Municipal]
-(Note: If exact dates are unknown, state "AWAITING OFFICIAL 2026 CERTIFICATION")
+UPCOMING ELECTION SCHEDULE:
+* [Strictly Future Date]: [Type of Election]
+* [Strictly Future Date]: [Type of Election]`;
 
-LOCAL REPRESENTATIVES (INCUMBENTS)
-* Executive: [Name] ([Party - optional, keep neutral])
-* Legislative: [Name] ([Party - optional])
-
-YOUR PRECINCT DATA
-* Polling Location: [Insert Address or "Pending Assignment 30 days prior to election"]
-* Registration Status Verification: [Insert official state URL to verify registration]
-
---------------------------------------------------
-END OF REPORT
-
-USER PINCODE: ${pincode}`;
+    const prompt = `USER PINCODE: ${pincode}`;
 
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -705,6 +686,7 @@ USER PINCODE: ${pincode}`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemInstruction }] },
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature: 0.1 }
         })
